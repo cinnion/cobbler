@@ -7,80 +7,561 @@
 # overwritten.
 #
 # ******************************************************************
+# $Log: dhcpd.conf,v $
+# Revision 1.29  2008/07/31 17:02:07  cinnion
+# - Fixing issues with panparis and voyager
+#
+# Revision 1.28  2008/06/06 20:22:12  cinnion
+# - Improved structuring of definitions for diskless and PXE booting
+# - Exchange panparis and paradise MAC addresses
+#
+# Revision 1.27  2008/03/12 01:24:54  cinnion
+# - Updated PXE to pull exclusively from fargone
+# - The default loader is now 'pxelinux.0' instead of 'pxegrub'
+# - Add panparis and paradise (SuperMicro 5013C-T and 6013A-T 27787)
+#
+# Revision 1.26  2008/01/12 18:11:03  cinnion
+# - Swap out pell in favor of resune as a NIS/NIS+ server
+# - Add mx400
+# - Change viking from the HP9000/F10 to a new machine (a SuperMicro 5013C-T)
+#
+# Revision 1.25  2007/11/24 07:04:45  cinnion
+# - Add subnets for 192.168.10, 192.168.11, 192.168.100 for Fleming
+# - Make (fargone) authoratative on subnets other than 192.168.0 and 192.168.1
+# - Disable ddns for the moment
+# - Preliminary work to deliver the vlan ID
+# - Make tftpboots point to fargone as next server
+# - Replace many other instances of pell with fargone, since pell is still up
+#   in CMH.
+# - Add in entry for sw02
+# - Patch up entries for MXes.
+#
+# Revision 1.24  2007/06/03 00:12:16  cinnion
+# - Fix typo
+#
+# Revision 1.23  2007/05/10 03:28:24  cinnion
+# - Add additional options for dealing with timezones, DNS searching and
+#   VLANS which are not defined by default in the ISC server.
+# - Add a semi-bogus usage for new domain-search option, which should be
+#   using some form of RLE instead of being a straight forward string.
+# - Add classes for access points, PXE/network booters, and the APC,
+#   going this route instead of groups. Classes appear to be applicable
+#   on a more global scope as well, so I only end up with one definition
+#   instead of two which I must keep in sync.
+# - Whitespace changes (hopefully making tabs of spaces, rather than the
+#   other way around)
+# - Added pools for access points, which should be denied allocation
+#   from the other, more general pools.
+# - Fixed mac for MX20.
+#
+# Revision 1.22  2007/04/24 19:03:09  cinnion
+# - Make changes to reflect that the nis/nisplus servers are
+#   downbelow, pell and fargone.
+#
+# Revision 1.21  2007/04/24 18:59:39  cinnion
+# - Change host names to reflect port name changes on alpha
+# - Change hardware address for cyteen to reflect completely new machine
+#   and add entries for the old machine as resune.
+#
+# Revision 1.20  2006/11/06 05:36:33  cinnion
+# - Add entry for APC with required vendor option definitions.
+#
+#
+#
+#ignore bootp;
+#ignore unknown-clients;
 
-ddns-update-style interim;
+use-host-decl-names			on;			# Give each host its name.
+min-lease-time				604800;			#  7 day
+default-lease-time			864000;			# 10 day
+max-lease-time				864000;			# 10 days
+#option dhcp-renewal-time		21600;			# T1=6hours
+#option dhcp-rebind-time		xxxx			# T2=xxxx
 
-allow booting;
-allow bootp;
-
+#
+#  DDNS stuff
+#
+#ddns-update-style			interim;
+ddns-update-style			none;
 ignore client-updates;
-set vendorclass = option vendor-class-identifier;
 
-option pxe-system-type code 93 = unsigned integer 16;
-
-subnet 192.168.1.0 netmask 255.255.255.0 {
-     option routers             192.168.1.5;
-     option domain-name-servers 192.168.1.1;
-     option subnet-mask         255.255.255.0;
-     range dynamic-bootp        192.168.1.100 192.168.1.254;
-     default-lease-time         21600;
-     max-lease-time             43200;
-     next-server                $next_server;
-     class "pxeclients" {
-          match if substring (option vendor-class-identifier, 0, 9) = "PXEClient";
-          if option pxe-system-type = 00:02 {
-                  filename "ia64/elilo.efi";
-          } else if option pxe-system-type = 00:06 {
-                  filename "grub/grub-x86.efi";
-          } else if option pxe-system-type = 00:07 {
-                  filename "grub/grub-x86_64.efi";
-          } else {
-                  filename "pxelinux.0";
-          }
-     }
-
+key DHCP_UPDATER {
+    algorithm				HMAC-MD5.SIG-ALG.REG.INT;
+    secret				"V7ibz2u8/vBSJvgpUJRYBw==";
 }
 
-#for dhcp_tag in $dhcp_tags.keys():
-    ## group could be subnet if your dhcp tags line up with your subnets
-    ## or really any valid dhcpd.conf construct ... if you only use the
-    ## default dhcp tag in cobbler, the group block can be deleted for a
-    ## flat configuration
-# group for Cobbler DHCP tag: $dhcp_tag
-group {
-        #for mac in $dhcp_tags[$dhcp_tag].keys():
-            #set iface = $dhcp_tags[$dhcp_tag][$mac]
-    host $iface.name {
-        hardware ethernet $mac;
-        #if $iface.ip_address:
-        fixed-address $iface.ip_address;
-        #end if
-        #if $iface.hostname:
-        option host-name "$iface.hostname";
-        #end if
-        #if $iface.netmask:
-        option subnet-mask $iface.netmask;
-        #end if
-        #if $iface.gateway:
-        option routers $iface.gateway;
-        #end if
-        #if $iface.enable_gpxe:
-        if exists user-class and option user-class = "gPXE" {
-            filename "http://$cobbler_server/cblr/svc/op/gpxe/system/$iface.owner";
-        } else if exists user-class and option user-class = "iPXE" {
-            filename "http://$cobbler_server/cblr/svc/op/gpxe/system/$iface.owner";
-        } else {
-            filename "undionly.kpxe";
-        }
-        #else
-        filename "$iface.filename";
-        #end if
-        ## Cobbler defaults to $next_server, but some users
-        ## may like to use $iface.system.server for proxied setups
-        next-server $next_server;
-        ## next-server $iface.next_server;
+#
+#  Additional options
+#
+option timezone			code 100 = string;
+option timezone-tz-string	code 101 = string;
+option domain-search		code 119 = string;
+option vlan_id			code 132 = string;
+option pxegrub-config-file	code 150 = string;
+
+option pxe-client-arch-id	code 93  = string;
+
+#
+#  PXE option space
+#
+option space PXE;
+option PXE.mtftp-ip		code 1 = ip-address;
+option PXE.mtftp-cport		code 2 = unsigned integer 16;
+option PXE.mtftp-sport		code 3 = unsigned integer 16;
+option PXE.mtftp-tmout		code 4 = unsigned integer 8;
+option PXE.mtftp-delay		code 5 = unsigned integer 8;
+option PXE.discovery-control	code 6 = unsigned integer 8;
+option PXE.discovery-mcast-addr	code 7 = ip-address;
+option PXE.end			code 255 = boolean;
+
+option space APC;
+option APC.cookie		code 1 = text;
+option APC.after-boot-mode	code 2 = unsigned integer 8;
+
+option space TRPZ;
+option TRPZ.mx			code 1 = text;
+
+#
+#  Classes
+#
+#    option vlan_id			64;
+
+class "access-point" {
+    match if substring(option vendor-class-identifier, 0, 12) = "WIRELESS-AP:";
+
+    option TRPZ.mx			"host:mx.dmz.ka8zrt.com";
+}
+
+class "apc" {
+    match if option vendor-class-identifier = "APC";
+
+    vendor-option-space				APC;
+    option APC.cookie				"1APC";
+    option APC.after-boot-mode			2;
+}
+
+class "NetBSD" {
+    match if substring(option vendor-class-identifier, 0, 17) = "NetBSD:i386:libsa";
+
+    next-server			viking.home.ka8zrt.com;
+    if filename = "install_amd64" {
+        option root-path	"/u1";
+	filename		"nfs:/release_400/amd64/binary/kernel/netbsd-INSTALL.gz";
     }
-        #end for
+    if filename = "install_i386" {
+        option root-path	"/u1";
+	filename		"nfs:/release_400/i386/binary/kernel/netbsd-INSTALL.gz";
+    }
+    if filename = "netbsd" {
+        option root-path	"/u1";
+	filename		"nfs:/release_400/i386/binary/kernel/netbsd-INSTALL.gz";
+    }
 }
+
+class "pxe" {
+    match if substring(option vendor-class-identifier, 0, 10) = "PXEClient:";
+
+    if option vendor-class-identifier = "PXEClient:Arch:00000:UNDI:002001" {
+	vendor-option-space PXE;
+
+        if option pxe-client-arch-id = 00:00 {
+            if hardware = 01:00:18:8b:C2:20:4a {
+                option vendor-class-identifier  "PXEClient";
+                filename                        "linux-install/pxelinux.0";
+                server-name                     "downbelow";
+                next-server                     $next_server;
+                option PXE.mtftp-ip             0.0.0.0;
+                option PXE.end                  on;
+            } else {
+                option vendor-class-identifier  "PXEClient";
+                filename                        "/pxelinux.0";
+                server-name                     "downbelow";
+                next-server                     $next_server;
+                option PXE.mtftp-ip             0.0.0.0;
+                option PXE.end                  on;
+            }
+        }
+
+        #
+        #  If the client requested a particular filename in the PXE exchange...
+        #
+        if filename = "install_162" {
+            filename "tftp:install_162";
+        }
+        if filename = "netbsd" {
+            option swap-server              fargone;
+            option root-path                "/u1/export/root";
+            filename                        "nfs:netbsd";
+        }
+    }
+}
+
+class "xen" {
+    match if substring(hardware,1,3) = 00:16:3e;
+}
+
+class "virtualbox" {
+    match if substring(hardware,1,3) = 08:00:27;
+}
+
+#
+#  Internal (private) subnet
+#
+subnet 192.168.10.0 netmask 255.255.255.0 {
+    authoritative;
+    option routers			192.168.10.1;			# Routers
+    option ntp-servers			downbelow,pell,panparis;	# RFC 1035 (v3)
+    option log-servers			downbelow,panparis;
+    option lpr-servers			downbelow,panparis;
+    option broadcast-address		192.168.10.255;
+    option domain-name-servers		downbelow,viking,panparis;	# DNS Servers
+    option domain-name			"home.ka8zrt.com";		# DNS Domain
+    option domain-search		"home.ka8zrt.com dmz.ka8zrt.com ka8zrt.com";
+
+    option timezone			"US/Eastern";
+
+    #
+    #  DDNS
+    #
+#    ddns-domainname			"home.ka8zrt.com";
+
+#    zone home.ka8zrt.com. {
+#	primary				pell;
+#	key				DHCP_UPDATER;
+#    }
+
+#    zone 0.168.192.in-addr.arpa. {
+#	primary				pell;
+#	key				DHCP_UPDATER;
+#    }
+
+    #
+    #  NIS/NIS+ options
+    #
+    option nis-domain			"ka8zrt.com";
+    option nis-servers			downbelow,pell;
+    option nisplus-domain		"home.ka8zrt.com";
+    option nisplus-servers		downbelow,pell;
+
+    #
+    #  Options for SMB
+    #
+    option netbios-name-servers		fargone;
+    option netbios-node-type		8;
+
+#    option extensions-path		"/var/tmp/dhcp.ext";
+
+    pool {
+	allow unknown clients;
+	deny members of "access-point";
+
+	range dynamic-bootp		192.168.10.128 192.168.10.159;
+	range				192.168.10.160 192.168.10.191;
+
+	min-lease-time			600;			# 10 min
+	default-lease-time		3600;			#  1 hour
+	max-lease-time			3600;			#  1 hour
+    }
+}
+
+#
+#  VLAN 11 - DMZ2
+#
+subnet 192.168.11.0 netmask 255.255.255.0 {
+    authoritative;
+    option routers			192.168.11.1;			# Routers
+    option ntp-servers			pell,downbelow,panparis;	# RFC 1035 (v3)
+    option log-servers			downbelow,panparis;
+    option lpr-servers			downbelow,panparis;
+    option broadcast-address		192.168.11.255;
+    option domain-name-servers		downbelow,viking,panparis;	# DNS Servers
+    option domain-name			"dmz.ka8zrt.com";		# DNS Domain
+    option domain-search		"home.ka8zrt.com dmz.ka8zrt.com ka8zrt.com";
+
+    option timezone			"US/Eastern";
+
+    pool {
+	allow unknown clients;
+	deny members of "access-point";
+
+	range dynamic-bootp		192.168.11.128 192.168.11.159;
+	range				192.168.11.160 192.168.11.191;
+
+	min-lease-time			600;			# 10 min
+	default-lease-time		3600;			#  1 hour
+	max-lease-time			3600;			#  1 hour
+    }
+
+    pool {
+	allow members of "access-point";
+
+	range 192.168.11.192 192.168.11.223;
+    }
+}
+
+group {
+    #
+    # Set of parameters common to all clients
+    # in this "group".
+    #
+
+    #
+    # An individual client.
+    #
+    host mariner {
+	hardware ethernet		08:00:09:0a:c2:26;	# HP 9000 715/64
+	fixed-address			mariner;
+
+	#
+	# Name of the bootloader or kernel
+	# to download via tftp.
+	#
+	filename		"netbsd.300/hp700/SYSNBSD";
+
+	#
+	# The path on the NFS server.
+	#
+	option root-path "/u2/diskless.300/mariner/root";
+	next-server			pell;
+    }
+}
+
+#
+#  Network related hosts
+#
+host alpha-ep0 {
+    hardware ethernet			00:60:08:97:e2:2b;
+    fixed-address			alpha;
+    option host-name			"alpha";
+}
+
+host alpha-fxp1 {
+    hardware ethernet			00:90:27:f4:52:d8;
+    fixed-address			alpha;
+    option host-name			"alpha";
+}
+
+host alpha-fxp2 {
+    hardware ethernet			00:90:27:f4:52:d9;
+    fixed-address			alpha;
+    option host-name			"alpha";
+}
+
+host apc {
+    hardware ethernet			00:c0:b7:7f:18:3e;
+    fixed-address			apc;
+}
+
+host hp2605dn {
+    hardware ethernet			00:1a:4b:15:05:f2;
+    fixed-address			hp2605dn;
+}
+
+host sw01 {
+    hardware ethernet			00:0d:88:f8:2c:0d;
+    fixed-address			sw01;
+}
+
+host sw02 {
+    hardware ethernet			00:c0:8c:b8:07:57;
+    fixed-address			sw02;
+}
+
+#
+#  Other server-related gear, such as the Xyplex terminal server
+#
+host xyplex {
+    hardware ethernet			08:00:87:0f:47:52;
+    fixed-address			xyplex;
+    filename				"XYPLEX/xpcsrv20.sys";
+    next-server				$next_server;
+}
+
+host beta-ep0 {
+    hardware ethernet			00:a0:24:0f:a3:25;
+    fixed-address			beta;
+    option host-name			"beta";
+}
+
+host beta-ep1 {
+    hardware ethernet			00:a0:24:05:f2:c0;
+    fixed-address			beta;
+    option host-name			"beta";
+}
+
+#
+#  DMZ hosts
+#
+host beta-ep2 {
+    hardware ethernet			00:a0:24:0a:a3:51;
+    fixed-address			mars.dmz.ka8zrt.com;
+    option host-name			"mars";
+}
+
+host beta-fxp0 {
+    hardware ethernet			00:90:27:32:77:9d;
+    fixed-address			mars.dmz.ka8zrt.com;
+    option host-name			"mars";
+}
+
+host mars {
+    option dhcp-client-identifier	"mars";
+    fixed-address			mars.dmz.ka8zrt.com;
+}
+
+host dgl4500 {
+    hardware ethernet			00:1C:F0:F1:77:07;
+    fixed-address			dgl4500;
+    option host-name			"dgl4500";
+}
+
+host actiontec {
+    hardware ethernet			00:1f:90:58:9f:95;
+    fixed-address			actiontec;
+    option host-name			"actiontec";
+}
+
+host actiontec2 {
+    hardware ethernet			00:1f:90:58:9f:96;
+    fixed-address			actiontec;
+    option host-name			"actiontec";
+    option domain-name-servers		mars.dmz.ka8zrt.com;
+}
+
+#
+#  Workstations
+#
+
+#host earth {
+#    option dhcp-client-identifier	"earth";
+#    hardware ethernet			00:16:76:ab:37:d2;	# EARTH
+#    fixed-address			earth;
+#}
+
+host fargone {
+    option dhcp-client-identifier	"fargone";
+    hardware ethernet			00:90:27:e6:3e:14;
+    fixed-address			fargone;
+}
+
+#
+#  Development and older hosts, which will primarily be booting from the network.
+#
+host anp {
+    option dhcp-client-identifier	"anp";
+    hardware ethernet			00:90:27:50:25:18;
+    fixed-address			anp;
+    option pxegrub-config-file		"/boot/grub/anp.conf";
+    next-server				fargone;
+}
+
+host jtag {
+    option dhcp-client-identifier	"jtag";
+    hardware ethernet			00:a0:1e:00:22:92;
+    fixed-address			jtag;
+}
+
+host cpci680-1 {
+    hardware ethernet			00:80:42:0e:dd:30;
+    fixed-address			cpci680;
+    next-server				fargone;
+    filename				"prep/boot_com0.bin";
+}
+
+host cpci680-2 {
+    hardware ethernet			00:80:42:0e:dd:31;
+    fixed-address			cpci680;
+}
+
+host mcp750 {
+    hardware ethernet			08:00:3e:2e:3c:8d;
+    fixed-address			mcp750;
+    next-server				fargone;
+    filename				"prep/boot_com0.bin";
+}
+
+host mx20-fxp {
+    hardware ethernet			00:d0:b7:3b:fb:08;
+    fixed-address			mx20-fxp;
+}
+
+#host viking {
+#    hardware ethernet			08:00:09:61:29:ed;	# HP F10 (917/927/937/947)
+#    fixed-address			viking;
+#}
+
+host viking {
+    hardware ethernet			00:30:48:77:7b:b2;
+    fixed-address			viking;
+}
+
+host mariner-hp {
+    hardware ethernet			08:00:09:0a:c2:27;	# HP 9000 715/64
+    fixed-address			mariner-hp;
+
+    filename				"netbsd/hp700/netinstall.current.lif";
+}
+
+#host directtv1 {
+#    hardware ethernet			00:50:94:ee:30:3d;
+#    fixed-address			directtv1;
+#}
+
+host fios-stb1 {
+    hardware ethernet			0b:00:79:da:15;
+    fixed-address			fios-stb1;
+}
+
+#    option subnet-mask			255.0.0.0;		# HP does not like class A subnetting as C
+#    option broadcast-address		10.255.255.255;
+
+#
+#  Cobbler system definitions inserted here
+#
+#for dhcp_tag in sorted($dhcp_tags.keys()):
+## group could be subnet if your dhcp tags line up with your subnets
+## or really any valid dhcpd.conf construct ... if you only use the
+## default dhcp tag in cobbler, the group block can be deleted for a
+## flat configuration
+##group {
+## group for Cobbler DHCP tag: $dhcp_tag
+#for mac in sorted($dhcp_tags[$dhcp_tag].keys()):
+#set iface = $dhcp_tags[$dhcp_tag][$mac]
+host $dhcp_tag {
+    hardware ethernet			$mac;
+    option dhcp-client-identifier	"$iface.name";
+#if $iface.hostname
+    option host-name			"$iface.hostname";
+#else if $iface.name
+    option host-name			"$iface.name";
+#end if
+
+#if $iface.ip_address:
+    fixed-address			$iface.ip_address;
+#else if $iface.dns_name:
+    fixed-address			$iface.dns_name;
+#else if $iface.hostname:
+    fixed-address			$iface.hostname;
+#else if $iface.name:
+    fixed-address			$iface.name;
+#else
+    fixed-address			$dhcp_tag;
+#end if
+#if $iface.subnet:
+    option subnet-mask			$iface.subnet;
+#end if
+#if $iface.gateway:
+    option routers			$iface.gateway;
+#end if
+#if $iface.netboot_enabled:
+    filename				"$iface.filename";
+    ## Cobbler defaults to $next_server, but some users
+    ## like to use $iface.system.server for proxied setups
+    next-server				$next_server;
+    ## next-server $iface.system.server;
+#end if
+}
+
+#end for
 #end for
 
