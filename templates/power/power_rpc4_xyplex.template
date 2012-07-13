@@ -1,0 +1,19 @@
+#
+#  power_address
+#  power_id
+#  power_pass
+#  power_user
+#  power_mode
+#
+#
+#  -a address
+#  -l login
+#  -n outlet
+#  -o power_mode	[ "Reboot" (default), "Off", "On"  (+ "status") ]
+#  -p password
+#
+#  -h 			Help
+#  -V			Version
+#  -v debuglog		debug
+
+/usr/local/bin/power_rpc4 -a "$power_address" -n "$power_id" -p "$power_pass" -o "$power_mode"
