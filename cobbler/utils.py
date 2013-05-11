@@ -279,6 +279,12 @@ def get_random_mac(api_handle,virt_type="xenpv"):
             random.randint(0x00, 0xff),
             random.randint(0x00, 0xff)
         ]
+    elif virt_type.startswith("vbox"):
+        mac = [ 0x08, 0x00, 0x27,
+            random.randint(0x00, 0xff),
+            random.randint(0x00, 0xff),
+            random.randint(0x00, 0xff)
+        ]
     elif virt_type.startswith("xen") or virt_type.startswith("qemu") or virt_type.startswith("kvm"):
         mac = [ 0x00, 0x16, 0x3e,
             random.randint(0x00, 0x7f),
@@ -1537,7 +1543,7 @@ def set_virt_type(self,vtype):
         self.virt_type = "<<inherit>>"
         return True
 
-    if vtype.lower() not in [ "qemu", "kvm", "xenpv", "xenfv", "vmware", "vmwarew", "openvz", "auto" ]:
+    if vtype.lower() not in [ "qemu", "kvm", "xenpv", "xenfv", "vmware", "vmwarew", "openvz", "vbox", "auto" ]:
         raise CX(_("invalid virt type (%s)" % vtype))
     self.virt_type = vtype
     return True
