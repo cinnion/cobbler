@@ -210,30 +210,15 @@ class "virtualbox" {
 subnet 192.168.10.0 netmask 255.255.255.0 {
     authoritative;
     option routers			192.168.10.1;			# Routers
-    option ntp-servers			panparis,downbelow,pell;	# RFC 1035 (v3)
-    option log-servers			panparis,downbelow;
-    option lpr-servers			panparis,downbelow;
     option broadcast-address		192.168.10.255;
-    option domain-name-servers		panparis,downbelow,viking;	# DNS Servers
+    option ntp-servers			panparis,resune,pell;		# RFC 1035 (v3)
+    option log-servers			panparis,resune;
+    option lpr-servers			panparis,resune;
+    option domain-name-servers		panparis,resune,viking;		# DNS Servers
     option domain-name			"home.ka8zrt.com";		# DNS Domain
     option domain-search		"home.ka8zrt.com dmz.ka8zrt.com ka8zrt.com";
 
     option timezone			"US/Eastern";
-
-    #
-    #  DDNS
-    #
-#    ddns-domainname			"home.ka8zrt.com";
-
-#    zone home.ka8zrt.com. {
-#	primary				pell;
-#	key				DHCP_UPDATER;
-#    }
-
-#    zone 0.168.192.in-addr.arpa. {
-#	primary				pell;
-#	key				DHCP_UPDATER;
-#    }
 
     #
     #  NIS/NIS+ options
@@ -250,6 +235,21 @@ subnet 192.168.10.0 netmask 255.255.255.0 {
     option netbios-node-type		8;
 
 #    option extensions-path		"/var/tmp/dhcp.ext";
+
+    #
+    #  DDNS 
+    #
+#    ddns-domainname			"home.ka8zrt.com";
+
+#    zone home.ka8zrt.com. {
+#	primary				pell;
+#	key				DHCP_UPDATER;
+#    }
+
+#    zone 0.168.192.in-addr.arpa. {
+#	primary				pell;
+#	key				DHCP_UPDATER;
+#    }
 
     pool {
 	allow unknown clients;
@@ -270,13 +270,13 @@ subnet 192.168.10.0 netmask 255.255.255.0 {
 subnet 192.168.11.0 netmask 255.255.255.0 {
     authoritative;
     option routers			192.168.11.1;			# Routers
-    option ntp-servers			panparis,pell,downbelow;	# RFC 1035 (v3)
-    option log-servers			panparis,downbelow;
-    option lpr-servers			panparis,downbelow;
     option broadcast-address		192.168.11.255;
-    option domain-name-servers		panparis,downbelow,viking;	# DNS Servers
+    option ntp-servers			panparis,resune,pell;		# RFC 1035 (v3)
+    option log-servers			panparis,resune;
+    option lpr-servers			panparis,resune;
+    option domain-name-servers		panparis,resune,viking;		# DNS Servers
     option domain-name			"dmz.ka8zrt.com";		# DNS Domain
-    option domain-search		"home.ka8zrt.com dmz.ka8zrt.com ka8zrt.com";
+    option domain-search		"dmz.ka8zrt.com home.ka8zrt.com ka8zrt.com";
 
     option timezone			"US/Eastern";
 
@@ -303,13 +303,13 @@ subnet 192.168.11.0 netmask 255.255.255.0 {
 #  VLAN 2048 - NIXBase
 #
 subnet 192.168.78.0 netmask 255.255.255.0 {
-    not authoritative;
-    option routers			192.168.78.1;			# Routers
-    option ntp-servers			panparis,pell,downbelow;	# RFC 1035 (v3)
-    option log-servers			panparis,downbelow;
-    option lpr-servers			panparis,downbelow;
+    not authoritative;							# Authoratative server is XXXXXX
     option broadcast-address		192.168.78.255;
-    option domain-name-servers		panparis,downbelow,viking;	# DNS Servers
+    option routers			192.168.78.1;			# Routers
+    option ntp-servers			panparis,resune,pell;		# RFC 1035 (v3)
+    option log-servers			panparis,resune;
+    option lpr-servers			panparis,resune;
+    option domain-name-servers		panparis,resune,viking;		# DNS Servers
     option domain-name			"nix.ka8zrt.com";		# DNS Domain
     option domain-search		"nix.ka8zrt.com home.ka8zrt.com dmz.ka8zrt.com ka8zrt.com";
 
