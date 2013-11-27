@@ -413,7 +413,11 @@ host $dhcp_tag {
     filename				"$iface.filename";
     ## Cobbler defaults to $next_server, but some users
     ## like to use $iface.system.server for proxied setups
+#if $iface.next_server:
+    next-server				$iface.next_server;
+#else
     next-server				$next_server;
+#end if
     ## next-server $iface.system.server;
 #end if
 }
