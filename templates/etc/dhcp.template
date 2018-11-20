@@ -1,3 +1,6 @@
+#import json
+#import pprint
+#import re
 # ******************************************************************
 # Cobbler managed dhcpd.conf file
 #
@@ -5,68 +8,6 @@
 # Do NOT make changes to /etc/dhcpd.conf. Instead, make your changes
 # in /etc/cobbler/dhcp.template, as /etc/dhcpd.conf will be
 # overwritten.
-#
-# ******************************************************************
-# $Log: dhcpd.conf,v $
-# Revision 1.29  2008/07/31 17:02:07  cinnion
-# - Fixing issues with panparis and voyager
-#
-# Revision 1.28  2008/06/06 20:22:12  cinnion
-# - Improved structuring of definitions for diskless and PXE booting
-# - Exchange panparis and paradise MAC addresses
-#
-# Revision 1.27  2008/03/12 01:24:54  cinnion
-# - Updated PXE to pull exclusively from fargone
-# - The default loader is now 'pxelinux.0' instead of 'pxegrub'
-# - Add panparis and paradise (SuperMicro 5013C-T and 6013A-T 27787)
-#
-# Revision 1.26  2008/01/12 18:11:03  cinnion
-# - Swap out pell in favor of resune as a NIS/NIS+ server
-# - Add mx400
-# - Change viking from the HP9000/F10 to a new machine (a SuperMicro 5013C-T)
-#
-# Revision 1.25  2007/11/24 07:04:45  cinnion
-# - Add subnets for 192.168.10, 192.168.11, 192.168.100 for Fleming
-# - Make (fargone) authoratative on subnets other than 192.168.0 and 192.168.1
-# - Disable ddns for the moment
-# - Preliminary work to deliver the vlan ID
-# - Make tftpboots point to fargone as next server
-# - Replace many other instances of pell with fargone, since pell is still up
-#   in CMH.
-# - Add in entry for sw02
-# - Patch up entries for MXes.
-#
-# Revision 1.24  2007/06/03 00:12:16  cinnion
-# - Fix typo
-#
-# Revision 1.23  2007/05/10 03:28:24  cinnion
-# - Add additional options for dealing with timezones, DNS searching and
-#   VLANS which are not defined by default in the ISC server.
-# - Add a semi-bogus usage for new domain-search option, which should be
-#   using some form of RLE instead of being a straight forward string.
-# - Add classes for access points, PXE/network booters, and the APC,
-#   going this route instead of groups. Classes appear to be applicable
-#   on a more global scope as well, so I only end up with one definition
-#   instead of two which I must keep in sync.
-# - Whitespace changes (hopefully making tabs of spaces, rather than the
-#   other way around)
-# - Added pools for access points, which should be denied allocation
-#   from the other, more general pools.
-# - Fixed mac for MX20.
-#
-# Revision 1.22  2007/04/24 19:03:09  cinnion
-# - Make changes to reflect that the nis/nisplus servers are
-#   downbelow, pell and fargone.
-#
-# Revision 1.21  2007/04/24 18:59:39  cinnion
-# - Change host names to reflect port name changes on alpha
-# - Change hardware address for cyteen to reflect completely new machine
-#   and add entries for the old machine as resune.
-#
-# Revision 1.20  2006/11/06 05:36:33  cinnion
-# - Add entry for APC with required vendor option definitions.
-#
-#
 #
 #ignore bootp;
 #ignore unknown-clients;
@@ -100,6 +41,9 @@ option vlan_id			code 132 = string;
 option pxegrub-config-file	code 150 = string;
 
 option pxe-client-arch-id	code 93  = string;
+
+option rfc3442-classless-static-routes		code 121 = array of integer 8;
+option ms-classless-static-routes		code 249 = array of integer 8;
 
 #
 #  PXE option space
@@ -210,52 +154,33 @@ class "virtualbox" {
 subnet 192.168.10.0 netmask 255.255.255.0 {
     authoritative;
     option routers			192.168.10.1;			# Routers
-    option ntp-servers			panparis,downbelow,pell;	# RFC 1035 (v3)
-    option log-servers			panparis,downbelow;
-    option lpr-servers			panparis,downbelow;
     option broadcast-address		192.168.10.255;
-    option domain-name-servers		panparis,downbelow,viking;	# DNS Servers
+    option ntp-servers			downbelow,cyteen,panparis;	# RFC 1035 (v3)
+    option log-servers			downbelow,resune,panparis;
+    option lpr-servers			downbelow,resune,panparis;
+    option domain-name-servers		downbelow,resune,cyteen;	# DNS Servers
     option domain-name			"home.ka8zrt.com";		# DNS Domain
     option domain-search		"home.ka8zrt.com dmz.ka8zrt.com ka8zrt.com";
 
     option timezone			"US/Eastern";
 
-    #
-    #  DDNS
-    #
-#    ddns-domainname			"home.ka8zrt.com";
+    option rfc3442-classless-static-routes      24, 192,168,11, 192,168,10,1,
+                                                24, 192,168,12, 192,168,10,1,
+                                                24, 192,168,13, 192,168,10,1,
+                                                24, 192,168,14, 192,168,10,1,
+                                                24, 192,168,15, 192,168,10,1;
 
-#    zone home.ka8zrt.com. {
-#	primary				pell;
-#	key				DHCP_UPDATER;
-#    }
-
-#    zone 0.168.192.in-addr.arpa. {
-#	primary				pell;
-#	key				DHCP_UPDATER;
-#    }
-
-    #
-    #  NIS/NIS+ options
-    #
-    option nis-domain			"ka8zrt.com";
-    option nis-servers			panparis,pell;
-    option nisplus-domain		"home.ka8zrt.com";
-    option nisplus-servers		panparis,pell;
-
-    #
-    #  Options for SMB
-    #
-    option netbios-name-servers		fargone;
-    option netbios-node-type		8;
-
-#    option extensions-path		"/var/tmp/dhcp.ext";
+    option ms-classless-static-routes           24, 192,168,11, 192,168,10,1,
+                                                24, 192,168,12, 192,168,10,1,
+                                                24, 192,168,13, 192,168,10,1,
+                                                24, 192,168,14, 192,168,10,1,
+                                                24, 192,168,15, 192,168,10,1;
 
     pool {
 	allow unknown clients;
 	deny members of "access-point";
 
-	range dynamic-bootp		192.168.10.128 192.168.10.159;
+	range dynamic-bootp		192.168.10.129 192.168.10.159;
 	range				192.168.10.160 192.168.10.191;
 
 	min-lease-time			600;			# 10 min
@@ -265,18 +190,18 @@ subnet 192.168.10.0 netmask 255.255.255.0 {
 }
 
 #
-#  VLAN 11 - DMZ2
+#  VLAN 11 - Dev
 #
 subnet 192.168.11.0 netmask 255.255.255.0 {
     authoritative;
     option routers			192.168.11.1;			# Routers
-    option ntp-servers			panparis,pell,downbelow;	# RFC 1035 (v3)
-    option log-servers			panparis,downbelow;
-    option lpr-servers			panparis,downbelow;
     option broadcast-address		192.168.11.255;
-    option domain-name-servers		panparis,downbelow,viking;	# DNS Servers
-    option domain-name			"dmz.ka8zrt.com";		# DNS Domain
-    option domain-search		"home.ka8zrt.com dmz.ka8zrt.com ka8zrt.com";
+    option ntp-servers			downbelow,resune,panparis;	# RFC 1035 (v3)
+    option log-servers			downbelow,resune,panparis;
+    option lpr-servers			downbelow,resune,panparis;
+    option domain-name-servers		downbelow,resune,cyteen;	# DNS Servers
+    option domain-name			"dev.ka8zrt.com";		# DNS Domain
+    option domain-search		"dev.ka8zrt.com home.ka8zrt.com dmz.ka8zrt.com ka8zrt.com";
 
     option timezone			"US/Eastern";
 
@@ -292,115 +217,103 @@ subnet 192.168.11.0 netmask 255.255.255.0 {
 	max-lease-time			3600;			#  1 hour
     }
 
-subnet 192.168.1.0 netmask 255.255.255.0 {
-     option routers             192.168.1.5;
-     option domain-name-servers 192.168.1.1;
-     option subnet-mask         255.255.255.0;
-     range dynamic-bootp        192.168.1.100 192.168.1.254;
-     default-lease-time         21600;
-     max-lease-time             43200;
-     next-server                $next_server;
-     class "pxeclients" {
-          match if substring (option vendor-class-identifier, 0, 9) = "PXEClient";
-          if option pxe-system-type = 00:02 {
-                  filename "ia64/elilo.efi";
-          } else if option pxe-system-type = 00:06 {
-                  filename "grub/grub-x86.efi";
-          } else if option pxe-system-type = 00:07 {
-                  filename "grub/grub-x86_64.efi";
-          } else if option pxe-system-type = 00:09 {
-                  filename "grub/grub-x86_64.efi";
-          } else {
-                  filename "pxelinux.0";
-          }
-     }
+    pool {
+	allow members of "access-point";
 
 	range 192.168.11.192 192.168.11.223;
     }
 }
 
 #
-#  VLAN 2048 - NIXBase
+#  VLAN 12 - DMZ
 #
-subnet 192.168.78.0 netmask 255.255.255.0 {
-    not authoritative;
-    option routers			192.168.78.1;			# Routers
-    option ntp-servers			panparis,pell,downbelow;	# RFC 1035 (v3)
-    option log-servers			panparis,downbelow;
-    option lpr-servers			panparis,downbelow;
-    option broadcast-address		192.168.78.255;
-    option domain-name-servers		panparis,downbelow,viking;	# DNS Servers
-    option domain-name			"nix.ka8zrt.com";		# DNS Domain
-    option domain-search		"nix.ka8zrt.com home.ka8zrt.com dmz.ka8zrt.com ka8zrt.com";
+subnet 192.168.12.0 netmask 255.255.255.0 {
+    authoritative;
+    option routers			192.168.12.1;			# Routers
+    option broadcast-address		192.168.12.255;
+    option ntp-servers			downbelow,resune,panparis;	# RFC 1035 (v3)
+    option log-servers			downbelow,resune,panparis;
+    option lpr-servers			downbelow,resune,panparis;
+    option domain-name-servers		downbelow,resune,cyteen;	# DNS Servers
+    option domain-name			"dmz.ka8zrt.com";		# DNS Domain
+    option domain-search		"dmz.ka8zrt.com home.ka8zrt.com ka8zrt.com";
 
     option timezone			"US/Eastern";
 
     pool {
-        allow unknown clients;
-        deny members of "access-point";
+	allow unknown clients;
+	deny members of "access-point";
 
-        range dynamic-bootp		192.168.78.128 192.168.78.159;
-        range				192.168.78.160 192.168.78.191;
+	range dynamic-bootp		192.168.12.128 192.168.12.159;
+	range				192.168.12.160 192.168.12.191;
 
-        min-lease-time			600;			# 10 min
-        default-lease-time		3600;			#  1 hour
-        max-lease-time			3600;			#  1 hour
+	min-lease-time			600;			# 10 min
+	default-lease-time		3600;			#  1 hour
+	max-lease-time			3600;			#  1 hour
     }
 
     pool {
-        allow members of "access-point";
+	allow members of "access-point";
 
-        range 192.168.78.192 192.168.78.223;
-    }
-}
-
-group {
-        #for mac in $dhcp_tags[$dhcp_tag].keys():
-            #set iface = $dhcp_tags[$dhcp_tag][$mac]
-    host $iface.name {
-        #if $iface.interface_type == "infiniband":
-        option dhcp-client-identifier = $mac;
-        #else
-        hardware ethernet $mac;
-        #end if
-        #if $iface.ip_address:
-        fixed-address $iface.ip_address;
-        #end if
-        #if $iface.hostname:
-        option host-name "$iface.hostname";
-        #end if
-        #if $iface.netmask:
-        option subnet-mask $iface.netmask;
-        #end if
-        #if $iface.gateway:
-        option routers $iface.gateway;
-        #end if
-        #if $iface.enable_gpxe:
-        if exists user-class and option user-class = "gPXE" {
-            filename "http://$cobbler_server/cblr/svc/op/gpxe/system/$iface.owner";
-        } else if exists user-class and option user-class = "iPXE" {
-            filename "http://$cobbler_server/cblr/svc/op/gpxe/system/$iface.owner";
-        } else {
-            filename "undionly.kpxe";
-        }
-        #else
-        filename "$iface.filename";
-        #end if
-        ## Cobbler defaults to $next_server, but some users
-        ## may like to use $iface.system.server for proxied setups
-        next-server $next_server;
-        ## next-server $iface.next_server;
+	range 192.168.12.192 192.168.12.223;
     }
 }
 
 #
-#  Other server-related gear, such as the Xyplex terminal server
+# VLAN 13 - NIXBase
 #
-host xyplex {
-    hardware ethernet			08:00:87:0f:47:52;
-    fixed-address			xyplex;
-    filename				"XYPLEX/xpcsrv20.sys";
-    next-server				$next_server;
+subnet 192.168.13.0 netmask 255.255.255.0 {
+    authoritative;
+    option routers			192.168.13.1;			# Routers
+    option broadcast-address		192.168.13.255;
+    option ntp-servers			downbelow,resune,panparis;	# RFC 1035 (v3)
+    option log-servers			downbelow,resune,panparis;
+    option lpr-servers			downbelow,resune,panparis;
+    option domain-name-servers		downbelow,resune,cyteen;	# DNS Servers
+    option domain-name			"nix.ka8zrt.com";		# DNS Domain
+    option domain-search		"nix.ka8zrt.com home.ka8zrt.com ka8zrt.com";
+
+    option timezone			"US/Eastern";
+
+    pool {
+	allow unknown clients;
+	deny members of "access-point";
+
+	range dynamic-bootp		192.168.13.128 192.168.13.159;
+	range				192.168.13.160 192.168.13.191;
+
+	min-lease-time			600;			# 10 min
+	default-lease-time		3600;			#  1 hour
+	max-lease-time			3600;			#  1 hour
+    }
+}
+
+#
+# VLAN 14 - TRMN development
+#
+subnet 192.168.14.0 netmask 255.255.255.0 {
+    authoritative;
+    option routers			192.168.14.1;			# Routers
+    option ntp-servers			downbelow,resune,panparis;	# RFC 1035 (v3)
+    option log-servers			downbelow,resune,panparis;
+    option lpr-servers			downbelow,resune,panparis;
+    option domain-name-servers		downbelow,resune,cyteen;	# DNS Servers
+    option domain-name			"dmz.ka8zrt.com";		# DNS Domain
+    option domain-search		"dmz.ka8zrt.com home.ka8zrt.com ka8zrt.com";
+
+    option timezone			"US/Eastern";
+
+    pool {
+	allow unknown clients;
+	deny members of "access-point";
+
+	range dynamic-bootp		192.168.14.128 192.168.14.159;
+	range				192.168.14.160 192.168.14.191;
+
+	min-lease-time			600;			# 10 min
+	default-lease-time		3600;			#  1 hour
+	max-lease-time			3600;			#  1 hour
+    }
 }
 
 #
@@ -415,40 +328,99 @@ host xyplex {
 ## group for Cobbler DHCP tag: $dhcp_tag
 #for mac in sorted($dhcp_tags[$dhcp_tag].keys()):
 #set iface = $dhcp_tags[$dhcp_tag][$mac]
+#set cid = $re.sub(r"\..*(-[^-]*)$", r"\1", $iface.name)
+
+## # $dhcp_tag
+## # $mac
+## # $iface
+## # $cid
+## # $_v
+##
 host $dhcp_tag {
     hardware ethernet			$mac;
-    option dhcp-client-identifier	"$iface.name";
-#if $iface.hostname
+#if $cid and $cid[0:7] != 'generic'
+    option dhcp-client-identifier	"$cid";
+#end if
+#if $iface.dns_name and $iface.dns_name[0:7] != 'generic'
+    option host-name			"$iface.dns_name";
+#else if $iface.hostname and $iface.hostname[0:7] != 'generic'
     option host-name			"$iface.hostname";
-#else if $iface.name
+#else if $iface.name and $iface.name[0:7] != 'generic'
     option host-name			"$iface.name";
 #end if
 
-#if $iface.ip_address:
+#if $iface.ip_address and $iface.ip_address[0:7] != 'generic'
     fixed-address			$iface.ip_address;
-#else if $iface.dns_name:
+#else if $iface.dns_name and $iface.dns_name[0:7] != 'generic'
     fixed-address			$iface.dns_name;
-#else if $iface.hostname:
+#else if $iface.hostname and $iface.hostname[0:7] != 'generic'
     fixed-address			$iface.hostname;
-#else if $iface.name:
+#else if $iface.name and $iface.name[0:7] != 'generic'
     fixed-address			$iface.name;
 #else
     fixed-address			$dhcp_tag;
 #end if
-#if $iface.subnet:
-    option subnet-mask			$iface.subnet;
+#if $iface.netmask
+    option subnet-mask			$iface.netmask;
 #end if
-#if $iface.gateway:
+#if $iface.gateway
     option routers			$iface.gateway;
 #end if
-#if $iface.netboot_enabled:
+#if $iface.netboot_enabled
     filename				"$iface.filename";
     ## Cobbler defaults to $next_server, but some users
     ## like to use $iface.system.server for proxied setups
+#if $iface.next_server
+    next-server				$iface.next_server;
+#else
     next-server				$next_server;
+#end if
     ## next-server $iface.system.server;
 #end if
 }
+#end for
+#end for
 
+#stop
+
+#// Vars
+
+#
+#  Loop through vars().items()
+#
+#for name in sorted(vars().items())
+# $name :
 #end for
+
+#// locals
+
+#
+#  Loop through locals().items()
+#
+#for item in sorted(locals().items())
+# $item
 #end for
+
+#// globals
+
+#
+#  Loop through globals().items()
+#
+#for item in sorted(globals().items())
+# $item
+#end for
+
+#// globals().items()
+###
+###  Loop through globals().items() as name/value
+###
+##globals:
+###for (name, value) in sorted(globals().items())
+##    \$name="\$globals().get($name)"
+###end for
+
+#// json
+
+
+####silent $sys.stderr.write()
+# $json.dumps($dhcp_tags, sort_keys=True, indent=4, separators=(',', ': '))
