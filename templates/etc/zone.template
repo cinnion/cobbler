@@ -7,7 +7,9 @@
                                         300          ; TTL
                                         )
 
-                        IN      NS      $cobbler_server.
+                        IN      NS      downbelow.home.ka8zrt.com.
+                        IN      NS      cyteen.home.ka8zrt.com.
+                        IN      NS      resune.home.ka8zrt.com.
 
 
 $cname_record

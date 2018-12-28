@@ -9,6 +9,7 @@
 # in /etc/cobbler/dhcp.template, as /etc/dhcpd.conf will be
 # overwritten.
 #
+# ******************************************************************
 #ignore bootp;
 #ignore unknown-clients;
 
@@ -36,7 +37,6 @@ key DHCP_UPDATER {
 #
 option timezone			code 100 = string;
 option timezone-tz-string	code 101 = string;
-option domain-search		code 119 = string;
 option vlan_id			code 132 = string;
 option pxegrub-config-file	code 150 = string;
 
@@ -149,39 +149,27 @@ class "virtualbox" {
 }
 
 #
-#  Internal (private) subnet
+#  Internal (private) subnet (Migrating 192.168.10/24 to 192.168.8/24 via /22)
 #
-subnet 192.168.10.0 netmask 255.255.255.0 {
+subnet 192.168.8.0 netmask 255.255.252.0 {
     authoritative;
-    option routers			192.168.10.1;			# Routers
-    option broadcast-address		192.168.10.255;
+    option routers			192.168.8.1;			# Routers
+    option broadcast-address		192.168.11.255;
     option ntp-servers			downbelow,cyteen,panparis;	# RFC 1035 (v3)
     option log-servers			downbelow,resune,panparis;
     option lpr-servers			downbelow,resune,panparis;
     option domain-name-servers		downbelow,resune,cyteen;	# DNS Servers
     option domain-name			"home.ka8zrt.com";		# DNS Domain
-    option domain-search		"home.ka8zrt.com dmz.ka8zrt.com ka8zrt.com";
+    option domain-search		"home.ka8zrt.com", "dmz.ka8zrt.com", "ka8zrt.com";
 
     option timezone			"US/Eastern";
-
-    option rfc3442-classless-static-routes      24, 192,168,11, 192,168,10,1,
-                                                24, 192,168,12, 192,168,10,1,
-                                                24, 192,168,13, 192,168,10,1,
-                                                24, 192,168,14, 192,168,10,1,
-                                                24, 192,168,15, 192,168,10,1;
-
-    option ms-classless-static-routes           24, 192,168,11, 192,168,10,1,
-                                                24, 192,168,12, 192,168,10,1,
-                                                24, 192,168,13, 192,168,10,1,
-                                                24, 192,168,14, 192,168,10,1,
-                                                24, 192,168,15, 192,168,10,1;
 
     pool {
 	allow unknown clients;
 	deny members of "access-point";
 
-	range dynamic-bootp		192.168.10.129 192.168.10.159;
-	range				192.168.10.160 192.168.10.191;
+	range dynamic-bootp		192.168.8.129 192.168.8.159;
+	range				192.168.8.160 192.168.8.191;
 
 	min-lease-time			600;			# 10 min
 	default-lease-time		3600;			#  1 hour
@@ -190,7 +178,7 @@ subnet 192.168.10.0 netmask 255.255.255.0 {
 }
 
 #
-#  VLAN 11 - Dev
+#  VLAN 11 - DEV (Disabled for migration)
 #
 subnet 192.168.11.0 netmask 255.255.255.0 {
     authoritative;
@@ -201,7 +189,7 @@ subnet 192.168.11.0 netmask 255.255.255.0 {
     option lpr-servers			downbelow,resune,panparis;
     option domain-name-servers		downbelow,resune,cyteen;	# DNS Servers
     option domain-name			"dev.ka8zrt.com";		# DNS Domain
-    option domain-search		"dev.ka8zrt.com home.ka8zrt.com dmz.ka8zrt.com ka8zrt.com";
+    option domain-search		"dev.ka8zrt.com", "home.ka8zrt.com", "dmz.ka8zrt.com", "ka8zrt.com";
 
     option timezone			"US/Eastern";
 
@@ -236,7 +224,7 @@ subnet 192.168.12.0 netmask 255.255.255.0 {
     option lpr-servers			downbelow,resune,panparis;
     option domain-name-servers		downbelow,resune,cyteen;	# DNS Servers
     option domain-name			"dmz.ka8zrt.com";		# DNS Domain
-    option domain-search		"dmz.ka8zrt.com home.ka8zrt.com ka8zrt.com";
+    option domain-search		"dmz.ka8zrt.com", "home.ka8zrt.com", "ka8zrt.com";
 
     option timezone			"US/Eastern";
 
@@ -271,7 +259,7 @@ subnet 192.168.13.0 netmask 255.255.255.0 {
     option lpr-servers			downbelow,resune,panparis;
     option domain-name-servers		downbelow,resune,cyteen;	# DNS Servers
     option domain-name			"nix.ka8zrt.com";		# DNS Domain
-    option domain-search		"nix.ka8zrt.com home.ka8zrt.com ka8zrt.com";
+    option domain-search		"nix.ka8zrt.com", "home.ka8zrt.com", "ka8zrt.com";
 
     option timezone			"US/Eastern";
 
@@ -299,7 +287,7 @@ subnet 192.168.14.0 netmask 255.255.255.0 {
     option lpr-servers			downbelow,resune,panparis;
     option domain-name-servers		downbelow,resune,cyteen;	# DNS Servers
     option domain-name			"dmz.ka8zrt.com";		# DNS Domain
-    option domain-search		"dmz.ka8zrt.com home.ka8zrt.com ka8zrt.com";
+    option domain-search		"dmz.ka8zrt.com", "home.ka8zrt.com", "ka8zrt.com";
 
     option timezone			"US/Eastern";
 

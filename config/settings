@@ -32,7 +32,7 @@ allow_dynamic_settings: 0
 # # # /var/log/cobbler/anamon/.  NOTE: This does allow an xmlrpc call to send logs
 # # # to this directory, without authentication, so enable only if you are
 # # # ok with this limitation.
-anamon_enabled: 0
+anamon_enabled: 1
 
 # If using authn_pam in the modules.conf, this can be configured
 # to change the PAM service authentication will be tested against.
@@ -66,6 +66,9 @@ cheetah_import_whitelist:
  - "random"
  - "re"
  - "time"
+ - "json"
+ - "pprint"
+ - "cobblerDebug"
 
 # Default createrepo_flags to use for new repositories. If you have
 # createrepo >= 0.4.10, consider "-c cache --update -C", which can
@@ -99,6 +102,7 @@ default_ownership:
 # openssl passwd -1
 # and put the output between the "" below.
 default_password_crypted: "$1$m99JBvqw$OL3aiRUSfvzoBvsVp6JMS0"
+nixbase_password_crypted: "$1$m99JBvqw$OL3aiRUSfvzoBvsVp6JMS0"
 teledev_password_crypted: "$1$qZ.6V3wp$eFhc8.kv9/1ZaboVMQmVz."
 telenet_password_crypted: "$1$xjA7yECu$3y.Nk1p9fMSFSKip25RW21"
 
@@ -117,7 +121,7 @@ default_template_type: "cheetah"
 # "virbr0".  This can be overriden on a per-profile
 # basis or at the koan command line though this saves
 # typing to just set it here to the most common option.
-default_virt_bridge: xenbr0
+default_virt_bridge: virbr0
 
 # use this as the default disk size for virt guests (GB)
 default_virt_file_size: 5
@@ -129,7 +133,7 @@ default_virt_ram: 512
 # is set on the profile/system, what virtualization type
 # should be assumed?  Values: xenpv, xenfv, qemu, vmware
 # (NOTE: this does not change what virt_type is chosen by import)
-default_virt_type: xenpv
+default_virt_type: qemu
 
 # enable gPXE booting? Enabling this option will cause cobbler
 # to copy the undionly.kpxe file to the tftp root directory, 
@@ -166,7 +170,7 @@ http_port: 80
 # kernel options can also be applied at the distro/profile/system
 # level.
 kernel_options:
- ksdevice: bootif
+ inst.ks.sendmac: ~
  lang: ' '
  text: ~
 
@@ -183,8 +187,8 @@ kernel_options_s390x:
 # configuration options if using the authn_ldap module. See the
 # the Wiki for details.  This can be ignored if you are not using
 # LDAP for WebUI/XMLRPC authentication.
-ldap_server: "ldap.example.com"
-ldap_base_dn: "DC=example,DC=com"
+ldap_server: "ldaps.ka8zrt.com"
+ldap_base_dn: "dc=ka8zrt,dc=com"
 ldap_port: 389
 ldap_tls: 1
 ldap_anonymous_bind: 1
@@ -245,11 +249,11 @@ manage_dhcp: 1
 
 # set to 1 to enable Cobbler's DNS management features.
 # the choice of DNS mangement engine is in /etc/cobbler/modules.conf
-manage_dns: 0
+manage_dns: 1
 
 # set to path of bind chroot to create bind-chroot compatible bind
 # configuration files.  This should be automatically detected.
-bind_chroot_path: ""
+bind_chroot_path: "/var/named/chroot/"
 
 # set to the ip address of the master bind DNS server for creating secondary
 # bind configuration files
@@ -265,17 +269,13 @@ manage_rsync: 0
 # if using BIND (named) for DNS management in /etc/cobbler/modules.conf
 # and manage_dns is enabled (above), this lists which zones are managed
 # See the Wiki (https://github.com/cobbler/cobbler/wiki/Dns-management) for more info
-manage_forward_zones: []
-manage_reverse_zones: []
+manage_forward_zones: ['home.ka8zrt.com', 'dmz.ka8zrt.com', 'nix.ka8zrt.com', 'trmn.ka8zrt.com', 'dev.ka8zrt.com']
+manage_reverse_zones: ['192.168.8', '192.168.10', '192.168.11', '192.168.12', '192.168.13', '192.168.14']
 
 # if using cobbler with manage_dhcp, put the IP address
 # of the cobbler server here so that PXE booting guests can find it
 # if you do not set this correctly, this will be manifested in TFTP open timeouts.
-next_server: 192.168.10.4
-
-# NIS (local addition)
-nis_domain: ka8zrt.com
-nis_server: downbelow.home.ka8zrt.com
+next_server: 192.168.10.5
 
 # settings for power management features.  optional.
 # see https://github.com/cobbler/cobbler/wiki/Power-management to learn more
@@ -387,7 +387,8 @@ scm_track_mode: "git"
 # if you have a server that appears differently to different subnets
 # (dual homed, etc), you need to read the --server-override section
 # of the manpage for how that works.
-server: 192.168.10.4
+server: 192.168.10.5
+http_server: 192.168.10.5
 
 # If set to 1, all commands will be forced to use the localhost address
 # instead of using the above value which can force commands like
