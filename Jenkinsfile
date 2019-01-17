@@ -5,7 +5,7 @@ pipeline {
     // agent and environment blocks we fall afoul of JENKINS-43911. :(
     agent {
         docker {
-            image 'ka8zrt-centos-cobbler-build'
+            image 'ka8zrt-centos-builds'
             registryUrl 'https://registry.ka8zrt.com'
             args "-v /repos/local/centos/7:/repos/local/centos/7:rw,z"
         }
@@ -21,6 +21,17 @@ pipeline {
     }
 
     stages {
+        stage('Container prep') {
+            steps {
+                sh '''
+                    groupadd -g 48 apache
+                    useradd -u 48 -g 48 --home-dir /usr/share/httpd apache
+
+                    yum install -y git openssl python-devel pyflakes redhat-rpm-config make mock rpm-build rpmdevtools rpmlint createrepo
+                '''
+            }
+        }
+
         stage('Build') {
             steps {
                 sh 'make rpms'
