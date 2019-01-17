@@ -23,13 +23,15 @@ pipeline {
     stages {
         stage('Container prep') {
             steps {
-                docker.withRun('-u 0:0') {
-                    sh '''
-                        groupadd -g 48 apache
-                        useradd -u 48 -g 48 --home-dir /usr/share/httpd apache
+                script {
+                    docker.withRun('-u 0:0') {
+                        sh '''
+                            groupadd -g 48 apache
+                            useradd -u 48 -g 48 --home-dir /usr/share/httpd apache
 
-                        yum install -y git openssl python-devel pyflakes redhat-rpm-config make mock rpm-build rpmdevtools rpmlint createrepo
-                    '''
+                            yum install -y git openssl python-devel pyflakes redhat-rpm-config make mock rpm-build rpmdevtools rpmlint createrepo
+                        '''
+                    }
                 }
             }
         }
