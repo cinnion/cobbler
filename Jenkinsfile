@@ -5,14 +5,14 @@ pipeline {
     // agent and environment blocks we fall afoul of JENKINS-43911. :(
     agent {
         docker {
-            image 'cobbler-build'
-            registryUrl 'https://registry.ka8zrt.com:5000'
-            args "-v /mirrors/repos/local/centos/7:/mirrors/repos/local/centos/7:rw,z"
+            image 'ka8zrt-centos-cobbler-build'
+            registryUrl 'https://registry.ka8zrt.com'
+            args "-v /repos/local/centos/7:/repos/local/centos/7:rw,z"
         }
     }
 
     environment {
-        REPO_BASE_DIR = '/mirrors/repos/local/centos/7'
+        REPO_BASE_DIR = '/repos/local/centos/7'
     }
 
     options {
