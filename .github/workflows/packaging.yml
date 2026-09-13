@@ -30,6 +30,27 @@ jobs:
           name: rpms-rockylinux-10
           path: |
             rpm-build/RPMS/*.rpm
+  build-rockylinux9-rpms:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        # https://github.com/actions/checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          # setuptools_scm needs the full history (incl. tags) to derive the
+          # version; a shallow checkout makes it guess a bogus version.
+          fetch-depth: 0
+      - name: Build a Rocky Linux 9 Package
+        shell: 'script -q -e -c "bash {0}"'
+        run: |
+          ./docker/rpms/build-and-install-rpms.sh rl9 docker/rpms/Rocky_Linux_9/Rocky_Linux_9.dockerfile
+      - name: Archive RPMs
+        # https://github.com/actions/upload-artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rpms-rockylinux-9
+          path: |
+            rpm-build/RPMS/*.rpm
   build-fedora43-rpms:
     runs-on: ubuntu-latest
     steps:
